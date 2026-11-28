@@ -67,6 +67,17 @@ class ShipmentService(BaseModuleService):
                     if store.is_frozen(n["module"], n["entry_id"]):
                         reason = store.get_frozen_reason(n["module"], n["entry_id"])
                         return False, f"批次中存在冻结记录（{reason}），不允许发运"
+
+            # 翻仓验收门禁：关联包装批仍有未完成待翻仓记录时禁止发运，
+            # 上一轮的翻仓验收回执不能当成本轮的通过证明
+            from app.services.turning import turning_service
+            for pid in turning_service.resolve_shipment_packing_ids(entry):
+                pending = turning_service.pending_for_packing(pid)
+                if pending:
+                    packing = store.find("packing", pid)
+                    pack_no = packing.get("登记编号", str(pid)) if packing else str(pid)
+                    return False, (f"包装批 {pack_no} 还有 {len(pending)} 条待翻仓记录"
+                                   f"未完成本轮验收，不允许确认发运")
         return True, None
 
     def get_shipped_batches(self) -> list[dict[str, Any]]:

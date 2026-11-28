@@ -37,6 +37,18 @@
       <button class="btn ghost" data-testid="reset" type="button" @click="resetFilters">重置条件</button>
     </form>
 
+    <!-- 仓储养护：同班次批量确认翻仓面板 -->
+    <StorageTurningPanel
+      v-if="meta.key === 'storage'"
+      :refresh-key="panelRefresh"
+      @changed="reload"
+    />
+    <!-- 发运交接：翻仓验收发运资格对照面板 -->
+    <ShipmentTurningPanel
+      v-if="meta.key === 'shipment'"
+      :refresh-key="panelRefresh"
+    />
+
     <!-- 批次追溯链面板 -->
     <div v-if="showTrace && traceBatchNo" class="trace-panel">
       <h4>批次 {{ traceBatchNo }} 追溯链</h4>
@@ -146,6 +158,8 @@ import {
 } from '@/api/backend-service'
 import { fetchTraceChain } from '@/api/pipeline-client'
 import type { EntryRow } from '@/data/types'
+import ShipmentTurningPanel from '@/views/ShipmentTurningPanel.vue'
+import StorageTurningPanel from '@/views/StorageTurningPanel.vue'
 
 const props = defineProps<{ moduleKey: string }>()
 const router = useRouter()
@@ -158,6 +172,8 @@ const filterFields = meta.fields.slice(0, 3)
 const showCreate = ref(false)
 const creating = ref(false)
 const createValues = ref<Record<string, string>>({})
+// 模块专属面板（翻仓验收/发运资格）的刷新信号：列表重载后同步刷新面板
+const panelRefresh = ref(0)
 
 // 工序模块判断
 const PROCESS_ORDER = ['picking', 'withering', 'fixing', 'rolling', 'fermentation', 'drying',
@@ -249,6 +265,8 @@ async function reload() {
     total.value = payload.total
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '业务列表读取失败'
+  } finally {
+    panelRefresh.value += 1
   }
 }
 

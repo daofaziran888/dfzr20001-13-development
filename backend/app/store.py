@@ -24,6 +24,8 @@ class Store:
         self._idempotency: dict[str, dict[str, Any]] = {}
         # 冻结标记：被不合格处置关联的记录 id -> True
         self._frozen: dict[tuple[str, int], str] = {}
+        # 翻仓验收回执：每项 {"id", "回执编号", "班次", "status", "items", "包装批清单", ...}
+        self._turning_receipts: list[dict[str, Any]] = []
         # 初始化建种子血缘索引
         self._build_lineage_from_seed()
 
@@ -133,6 +135,20 @@ class Store:
 
     def get_frozen_reason(self, module: str, entry_id: int) -> str | None:
         return self._frozen.get((module, entry_id))
+
+    # ── 翻仓验收回执 ──
+
+    def add_turning_receipt(self, receipt: dict[str, Any]) -> None:
+        self._turning_receipts.append(receipt)
+
+    def turning_receipts(self) -> list[dict[str, Any]]:
+        return self._turning_receipts
+
+    def find_turning_receipt(self, receipt_id: int) -> dict[str, Any] | None:
+        for receipt in self._turning_receipts:
+            if int(receipt.get("id", 0)) == int(receipt_id):
+                return receipt
+        return None
 
     # ── 重量/损耗计算辅助 ──
 
